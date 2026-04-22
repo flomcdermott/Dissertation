@@ -1,0 +1,1312 @@
+{
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/flomcdermott/Dissertation/blob/main/Analysing%20results\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "colab": {
+          "background_save": true,
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "tDmogtBFu3of",
+        "outputId": "6cf36dc4-63ee-436d-b1d4-6584ea7a8e0d"
+      },
+      "outputs": [
+        {
+          "name": "stderr",
+          "output_type": "stream",
+          "text": [
+            "Loading required package: lme4\n",
+            "\n",
+            "Warning message in library(package, lib.loc = lib.loc, character.only = TRUE, logical.return = TRUE, :\n",
+            "“there is no package called ‘lme4’”\n",
+            "Installing package into ‘/usr/local/lib/R/site-library’\n",
+            "(as ‘lib’ is unspecified)\n",
+            "\n",
+            "also installing the dependencies ‘rbibutils’, ‘Rdpack’, ‘minqa’, ‘nloptr’, ‘reformulas’, ‘RcppEigen’\n",
+            "\n",
+            "\n",
+            "Loading required package: Matrix\n",
+            "\n",
+            "Loading required package: MuMIn\n",
+            "\n",
+            "Warning message in library(package, lib.loc = lib.loc, character.only = TRUE, logical.return = TRUE, :\n",
+            "“there is no package called ‘MuMIn’”\n",
+            "Installing package into ‘/usr/local/lib/R/site-library’\n",
+            "(as ‘lib’ is unspecified)\n",
+            "\n",
+            "also installing the dependency ‘insight’\n",
+            "\n",
+            "\n",
+            "Loading required package: readxl\n",
+            "\n"
+          ]
+        },
+        {
+          "ename": "ERROR",
+          "evalue": "Error: `path` does not exist: ‘/content/meta-llama:Llama-3.2-3B results.xlsx’\n",
+          "output_type": "error",
+          "traceback": [
+            "Error: `path` does not exist: ‘/content/meta-llama:Llama-3.2-3B results.xlsx’\nTraceback:\n",
+            "1. check_file(path)",
+            "2. stop(\"`path` does not exist: \", sQuote(path), call. = FALSE)",
+            "3. .handleSimpleError(function (cnd) \n . {\n .     watcher$capture_plot_and_output()\n .     cnd <- sanitize_call(cnd)\n .     watcher$push(cnd)\n .     switch(on_error, continue = invokeRestart(\"eval_continue\"), \n .         stop = invokeRestart(\"eval_stop\"), error = NULL)\n . }, \"`path` does not exist: ‘/content/meta-llama:Llama-3.2-3B results.xlsx’\", \n .     base::quote(NULL))"
+          ]
+        }
+      ],
+      "source": [
+        "if (!require(lme4))\n",
+        "  {install.packages(\"lme4\")}\n",
+        "    library(lme4)\n",
+        "\n",
+        "if (!require(MuMIn))\n",
+        "  {install.packages(\"MuMIn\")}\n",
+        "    library(MuMIn)\n",
+        "\n",
+        "if (!require(readxl))\n",
+        "  {install.packages(\"readxl\")}\n",
+        "    library(readxl)\n",
+        "# Read the Excel file into a data frame, specifying no column names initially\n",
+        "gpt2results <- read_excel('/content/GPT2 results excel.xlsx', col_names = FALSE)\n",
+        "# Use the second row as column names\n",
+        "colnames(gpt2results) <- unlist(gpt2results[2, ])\n",
+        "# Remove the first two rows (the original header and the one just used for names)\n",
+        "gpt2results <- gpt2results[-c(1, 2), ]\n",
+        "# Convert relevant columns to their correct types\n",
+        "gpt2results$log_he_she_odds <- as.numeric(gpt2results$log_he_she_odds)\n",
+        "gpt2results$tense <- as.factor(gpt2results$tense)\n",
+        "gpt2results$semantic_role <- as.factor(gpt2results$semantic_role)\n",
+        "gpt2results$syntactic_role <- as.factor(gpt2results$syntactic_role)\n",
+        "gpt2results$valence <- as.factor(gpt2results$valence)\n",
+        "gpt2results$dominance <- as.factor(gpt2results$dominance)\n",
+        "gpt2results$profession <- as.factor(gpt2results$profession)\n",
+        "cat(\"Data prepared and packages loaded successfully. \")"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "2jqYp0zax0hv",
+        "outputId": "385a9313-f623-48a8-a850-61cfce19503e"
+      },
+      "outputs": [
+        {
+          "name": "stdout",
+          "output_type": "stream",
+          "text": [
+            "\n",
+            "--- GPT2 Full Mixed Model Summary --- \n",
+            "Fixed Effects:                            Estimate Std. Error     t value\n",
+            "(Intercept)              0.42278193 0.09265717   4.5628625\n",
+            "tensepast perfect        0.01241714 0.03191756   0.3890379\n",
+            "tensepresent continuous  0.22897639 0.03191756   7.1739945\n",
+            "tensepresent perfect     0.07123743 0.03191756   2.2319197\n",
+            "tensesimple future       0.22773884 0.03191756   7.1352214\n",
+            "tensesimple past         0.10154419 0.03191756   3.1814523\n",
+            "syntactic_rolesubject   -0.01539223 0.01842761  -0.8352809\n",
+            "valence+val              0.12707285 0.01861470   6.8264794\n",
+            "dominance+dom           -0.25868034 0.01852139 -13.9665724\n",
+            "semantic_rolepatient    -0.07142514 0.01842761  -3.8759847\n",
+            "\n",
+            "Random Effects:          grp        var1 var2      vcov     sdcor\n",
+            "1 profession (Intercept) <NA> 0.1082855 0.3290676\n",
+            "2   Residual        <NA> <NA> 0.5704891 0.7553073\n",
+            "\n",
+            "Marginal R-squared (R2m):  0.0453369307051823  Conditional R-squared (R2c):  0.197635124551065  ------------------------------------- "
+          ]
+        }
+      ],
+      "source": [
+        "#full mixed model\n",
+        "gpt2_full_mixed = lmer(log_he_she_odds ~ (tense + syntactic_role + valence + dominance + semantic_role)^2 + (1+ semantic_role + syntactic_role| profession), data = gpt2results)\n",
+        "summary_full_mixed <- summary(gpt2_full_mixed)\n",
+        "rsquared_full_mixed <- r.squaredGLMM(gpt2_full_mixed)\n",
+        "fixed_effects_full <- as.data.frame(summary_full_mixed$coefficients)\n",
+        "random_effects_full <- as.data.frame(summary_full_mixed$varcor)\n",
+        "model_summary_full <- list(\n",
+        "  fixed_effects = fixed_effects_full,\n",
+        "  random_effects = random_effects_full,\n",
+        "  R2m = rsquared_full_mixed[1, \"R2m\"],\n",
+        "  R2c = rsquared_full_mixed[1, \"R2c\"]\n",
+        ")\n",
+        "cat(\"\n",
+        "--- GPT2 Full Mixed Model Summary --- \")\n",
+        "\n",
+        "cat(\"\n",
+        "Fixed Effects: \")\n",
+        "print(model_summary_full$fixed_effects)\n",
+        "\n",
+        "cat(\"\n",
+        "Random Effects: \")\n",
+        "print(model_summary_full$random_effects)\n",
+        "\n",
+        "cat(paste(\"\n",
+        "Marginal R-squared (R2m): \", model_summary_full$R2m, \" \"))\n",
+        "cat(paste(\"Conditional R-squared (R2c): \", model_summary_full$R2c, \" \"))\n",
+        "\n",
+        "cat(\"------------------------------------- \")\n",
+        "\n",
+        "#interpret coefficients, if there are significant ones for interaction terms, then use '()^2' in all the other models"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "OD-65Tykyyig",
+        "outputId": "5dea90c1-97b7-4803-89a7-80b23990f93c"
+      },
+      "outputs": [
+        {
+          "name": "stdout",
+          "output_type": "stream",
+          "text": [
+            "\n",
+            "--- GPT2 No Tense Mixed Model Summary --- \n",
+            "Fixed Effects:                          Estimate Std. Error     t value\n",
+            "(Intercept)            0.52976759 0.09036451   5.8625625\n",
+            "syntactic_rolesubject -0.01539223 0.01855835  -0.8293963\n",
+            "valence+val            0.12707285 0.01874677   6.7783870\n",
+            "dominance+dom         -0.25868034 0.01865280 -13.8681782\n",
+            "semantic_rolepatient  -0.07142514 0.01855835  -3.8486785\n",
+            "\n",
+            "Random Effects:          grp        var1 var2      vcov     sdcor\n",
+            "1 profession (Intercept) <NA> 0.1082686 0.3290420\n",
+            "2   Residual        <NA> <NA> 0.5786130 0.7606662\n",
+            "\n",
+            "Marginal R-squared (R2m):  0.0333626136556241  Conditional R-squared (R2c):  0.185727276030094  ------------------------------------- "
+          ]
+        }
+      ],
+      "source": [
+        "#model excluding tense\n",
+        "gpt2_no_tense = lmer(log_he_she_odds ~ (syntactic_role + valence + dominance + semantic_role)^2 + (1 + semantic_role + syntactic_role| profession), data = gpt2results)\n",
+        "summary_no_tense <- summary(gpt2_no_tense)\n",
+        "rsquared_no_tense <- r.squaredGLMM(gpt2_no_tense)\n",
+        "fixed_effects_no_tense <- as.data.frame(summary_no_tense$coefficients)\n",
+        "random_effects_no_tense <- as.data.frame(summary_no_tense$varcor)\n",
+        "model_summary_no_tense <- list(\n",
+        "  fixed_effects = fixed_effects_no_tense,\n",
+        "  random_effects = random_effects_no_tense,\n",
+        "  R2m = rsquared_no_tense[1, \"R2m\"],\n",
+        "  R2c = rsquared_no_tense[1, \"R2c\"]\n",
+        ")\n",
+        "cat(\"\n",
+        "--- GPT2 No Tense Mixed Model Summary --- \")\n",
+        "\n",
+        "cat(\"\n",
+        "Fixed Effects: \")\n",
+        "print(model_summary_no_tense$fixed_effects)\n",
+        "\n",
+        "cat(\"\n",
+        "Random Effects: \")\n",
+        "print(model_summary_no_tense$random_effects)\n",
+        "\n",
+        "cat(paste(\"\n",
+        "Marginal R-squared (R2m): \", model_summary_no_tense$R2m, \" \"))\n",
+        "cat(paste(\"Conditional R-squared (R2c): \", model_summary_no_tense$R2c, \" \"))\n",
+        "\n",
+        "cat(\"------------------------------------- \")"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "roB_vmUDztfq",
+        "outputId": "cededd4d-6843-4331-c0f2-fe2e68c11f3a"
+      },
+      "outputs": [
+        {
+          "name": "stderr",
+          "output_type": "stream",
+          "text": [
+            "refitting model(s) with ML (instead of REML)\n",
+            "\n"
+          ]
+        },
+        {
+          "name": "stdout",
+          "output_type": "stream",
+          "text": [
+            "Data: gpt2results\n",
+            "Models:\n",
+            "gpt2_no_tense: log_he_she_odds ~ syntactic_role + valence + dominance + semantic_role + (1 | profession)\n",
+            "gpt2_full_mixed: log_he_she_odds ~ tense + syntactic_role + valence + dominance + semantic_role + (1 | profession)\n",
+            "                npar   AIC   BIC  logLik -2*log(L)  Chisq Df Pr(>Chisq)    \n",
+            "gpt2_no_tense      7 15466 15514 -7726.0     15452                         \n",
+            "gpt2_full_mixed   12 15376 15458 -7676.1     15352 99.826  5  < 2.2e-16 ***\n",
+            "---\n",
+            "Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1\n"
+          ]
+        }
+      ],
+      "source": [
+        "#significance of R2 difference for no tense model\n",
+        "\n",
+        "gpt2_no_tense_significance <- anova(gpt2_full_mixed,gpt2_no_tense)\n",
+        "print(gpt2_no_tense_significance)"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "V_56i1Es1IlH",
+        "outputId": "bb1e3c8f-fdfb-4e27-d509-1a75d022f3d3"
+      },
+      "outputs": [
+        {
+          "name": "stdout",
+          "output_type": "stream",
+          "text": [
+            "\n",
+            "--- GPT2 No Syntactic Role Mixed Model Summary --- \n",
+            "Fixed Effects:                            Estimate Std. Error     t value\n",
+            "(Intercept)              0.41508581 0.09219776   4.5021249\n",
+            "tensepast perfect        0.01241714 0.03191684   0.3890467\n",
+            "tensepresent continuous  0.22897639 0.03191684   7.1741564\n",
+            "tensepresent perfect     0.07123743 0.03191684   2.2319701\n",
+            "tensesimple future       0.22773884 0.03191684   7.1353824\n",
+            "tensesimple past         0.10154419 0.03191684   3.1815241\n",
+            "valence+val              0.12707285 0.01861428   6.8266335\n",
+            "dominance+dom           -0.25868034 0.01852097 -13.9668876\n",
+            "semantic_rolepatient    -0.07142514 0.01842719  -3.8760722\n",
+            "\n",
+            "Random Effects:          grp        var1 var2      vcov     sdcor\n",
+            "1 profession (Intercept) <NA> 0.1082855 0.3290677\n",
+            "2   Residual        <NA> <NA> 0.5704633 0.7552902\n",
+            "\n",
+            "Marginal R-squared (R2m):  0.0452590204680269  Conditional R-squared (R2c):  0.197575482866574  ------------------------------------- "
+          ]
+        }
+      ],
+      "source": [
+        "#model excluding syntactic role\n",
+        "gpt2_no_syntactic_role = lmer (log_he_she_odds ~ (tense + valence + dominance + semantic_role)^2 + (1 + semantic_role| profession), data = gpt2results)\n",
+        "summary_no_syntactic_role <- summary(gpt2_no_syntactic_role)\n",
+        "rsquared_no_syntactic_role <- r.squaredGLMM(gpt2_no_syntactic_role)\n",
+        "fixed_effects_no_syntactic_role <- as.data.frame(summary_no_syntactic_role$coefficients)\n",
+        "random_effects_no_syntactic_role <- as.data.frame(summary_no_syntactic_role$varcor)\n",
+        "model_summary_no_syntactic_role <- list(\n",
+        "  fixed_effects = fixed_effects_no_syntactic_role,\n",
+        "  random_effects = random_effects_no_syntactic_role,\n",
+        "  R2m = rsquared_no_syntactic_role[1, \"R2m\"],\n",
+        "  R2c = rsquared_no_syntactic_role[1, \"R2c\"]\n",
+        ")\n",
+        "cat(\"\n",
+        "--- GPT2 No Syntactic Role Mixed Model Summary --- \")\n",
+        "\n",
+        "cat(\"\n",
+        "Fixed Effects: \")\n",
+        "print(model_summary_no_syntactic_role$fixed_effects)\n",
+        "\n",
+        "cat(\"\n",
+        "Random Effects: \")\n",
+        "print(model_summary_no_syntactic_role$random_effects)\n",
+        "\n",
+        "cat(paste(\"\n",
+        "Marginal R-squared (R2m): \", model_summary_no_syntactic_role$R2m, \" \"))\n",
+        "cat(paste(\"Conditional R-squared (R2c): \", model_summary_no_syntactic_role$R2c, \" \"))\n",
+        "\n",
+        "cat(\"------------------------------------- \")"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "exFrRlNB1uIv",
+        "outputId": "6ea68b58-957d-4e30-b7ab-d57c6d937f0c"
+      },
+      "outputs": [
+        {
+          "name": "stderr",
+          "output_type": "stream",
+          "text": [
+            "refitting model(s) with ML (instead of REML)\n",
+            "\n"
+          ]
+        },
+        {
+          "name": "stdout",
+          "output_type": "stream",
+          "text": [
+            "Data: gpt2results\n",
+            "Models:\n",
+            "gpt2_no_syntactic_role: log_he_she_odds ~ tense + valence + dominance + semantic_role + (1 | profession)\n",
+            "gpt2_full_mixed: log_he_she_odds ~ tense + syntactic_role + valence + dominance + semantic_role + (1 | profession)\n",
+            "                       npar   AIC   BIC  logLik -2*log(L)  Chisq Df Pr(>Chisq)\n",
+            "gpt2_no_syntactic_role   11 15375 15450 -7676.4     15353                     \n",
+            "gpt2_full_mixed          12 15376 15458 -7676.1     15352 0.6986  1     0.4033\n"
+          ]
+        }
+      ],
+      "source": [
+        "#significance of R2 difference for no syntatic role model\n",
+        "\n",
+        "gpt2_no_syntactic_role_significance <- anova(gpt2_full_mixed,gpt2_no_syntactic_role)\n",
+        "print(gpt2_no_syntactic_role_significance)"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "w5bB1hYw1-Rb",
+        "outputId": "c79d512d-b818-414b-83f1-274682355f6b"
+      },
+      "outputs": [
+        {
+          "name": "stdout",
+          "output_type": "stream",
+          "text": [
+            "\n",
+            "--- GPT2 No Valence Mixed Model Summary --- \n",
+            "Fixed Effects:                            Estimate Std. Error     t value\n",
+            "(Intercept)              0.48631835 0.09221360   5.2738246\n",
+            "tensepast perfect        0.01241714 0.03202602   0.3877203\n",
+            "tensepresent continuous  0.22897639 0.03202602   7.1496977\n",
+            "tensepresent perfect     0.07123743 0.03202602   2.2243607\n",
+            "tensesimple future       0.22773884 0.03202602   7.1110560\n",
+            "tensesimple past         0.10154419 0.03202602   3.1706774\n",
+            "syntactic_rolesubject   -0.01539223 0.01849023  -0.8324520\n",
+            "dominance+dom           -0.27138763 0.01849023 -14.6773502\n",
+            "semantic_rolepatient    -0.07142514 0.01849023  -3.8628576\n",
+            "\n",
+            "Random Effects:          grp        var1 var2      vcov     sdcor\n",
+            "1 profession (Intercept) <NA> 0.1082774 0.3290553\n",
+            "2   Residual        <NA> <NA> 0.5743731 0.7578740\n",
+            "\n",
+            "Marginal R-squared (R2m):  0.0397765097484916  Conditional R-squared (R2c):  0.192080643942433  ------------------------------------- "
+          ]
+        }
+      ],
+      "source": [
+        "#model exlcuding valence\n",
+        "gpt2_no_valence = lmer(log_he_she_odds ~ (tense + syntactic_role + dominance + semantic_role)^2 + (1 + semantic_role + syntactic_role| profession), data = gpt2results)\n",
+        "summary_no_valence <- summary(gpt2_no_valence)\n",
+        "rsquared_no_valence <- r.squaredGLMM(gpt2_no_valence)\n",
+        "fixed_effects_no_valence <- as.data.frame(summary_no_valence$coefficients)\n",
+        "random_effects_no_valence <- as.data.frame(summary_no_valence$varcor)\n",
+        "model_summary_no_valence <- list(\n",
+        "  fixed_effects = fixed_effects_no_valence,\n",
+        "  random_effects = random_effects_no_valence,\n",
+        "  R2m = rsquared_no_valence[1, \"R2m\"],\n",
+        "  R2c = rsquared_no_valence[1, \"R2c\"]\n",
+        ")\n",
+        "cat(\"\n",
+        "--- GPT2 No Valence Mixed Model Summary --- \")\n",
+        "\n",
+        "cat(\"\n",
+        "Fixed Effects: \")\n",
+        "print(model_summary_no_valence$fixed_effects)\n",
+        "\n",
+        "cat(\"\n",
+        "Random Effects: \")\n",
+        "print(model_summary_no_valence$random_effects)\n",
+        "\n",
+        "cat(paste(\"\n",
+        "Marginal R-squared (R2m): \", model_summary_no_valence$R2m, \" \"))\n",
+        "cat(paste(\"Conditional R-squared (R2c): \", model_summary_no_valence$R2c, \" \"))\n",
+        "\n",
+        "cat(\"------------------------------------- \")"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "6nQdjdiM2jsm",
+        "outputId": "bff7b128-590e-4190-a694-e4c361736f95"
+      },
+      "outputs": [
+        {
+          "name": "stderr",
+          "output_type": "stream",
+          "text": [
+            "refitting model(s) with ML (instead of REML)\n",
+            "\n"
+          ]
+        },
+        {
+          "name": "stdout",
+          "output_type": "stream",
+          "text": [
+            "Data: gpt2results\n",
+            "Models:\n",
+            "gpt2_no_valence: log_he_she_odds ~ tense + syntactic_role + dominance + semantic_role + (1 | profession)\n",
+            "gpt2_full_mixed: log_he_she_odds ~ tense + syntactic_role + valence + dominance + semantic_role + (1 | profession)\n",
+            "                npar   AIC   BIC  logLik -2*log(L)  Chisq Df Pr(>Chisq)    \n",
+            "gpt2_no_valence   11 15421 15496 -7699.3     15399                         \n",
+            "gpt2_full_mixed   12 15376 15458 -7676.1     15352 46.502  1  9.153e-12 ***\n",
+            "---\n",
+            "Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1\n"
+          ]
+        }
+      ],
+      "source": [
+        "#significance of R2 difference for no valence model\n",
+        "\n",
+        "gpt2_no_valence_significance <- anova(gpt2_full_mixed,gpt2_no_valence)\n",
+        "print(gpt2_no_valence_significance)"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "Hh8difS322Bc",
+        "outputId": "5d3a2476-6189-490c-e914-e78219887284"
+      },
+      "outputs": [
+        {
+          "name": "stdout",
+          "output_type": "stream",
+          "text": [
+            "\n",
+            "--- GPT2 No Dominance Mixed Model Summary --- \n",
+            "Fixed Effects:                            Estimate Std. Error    t value\n",
+            "(Intercept)              0.28168356 0.09220911  3.0548345\n",
+            "tensepast perfect        0.01241714 0.03237664  0.3835216\n",
+            "tensepresent continuous  0.22897639 0.03237664  7.0722715\n",
+            "tensepresent perfect     0.07123743 0.03237664  2.2002724\n",
+            "tensesimple future       0.22773884 0.03237664  7.0340482\n",
+            "tensesimple past         0.10154419 0.03237664  3.1363412\n",
+            "syntactic_rolesubject   -0.01539223 0.01869266 -0.8234371\n",
+            "valence+val              0.15320218 0.01878683  8.1547640\n",
+            "semantic_rolepatient    -0.07142514 0.01869266 -3.8210256\n",
+            "\n",
+            "Random Effects:          grp        var1 var2      vcov     sdcor\n",
+            "1 profession (Intercept) <NA> 0.1082510 0.3290152\n",
+            "2   Residual        <NA> <NA> 0.5870182 0.7661711\n",
+            "\n",
+            "Marginal R-squared (R2m):  0.0220448754102593  Conditional R-squared (R2c):  0.174309127626912  ------------------------------------- "
+          ]
+        }
+      ],
+      "source": [
+        "#model exlcuing dominance\n",
+        "gpt2_no_dominance = lmer(log_he_she_odds ~ (tense + syntactic_role + valence + semantic_role)^2 + (1 + semantic_role + syntactic_role| profession), data = gpt2results)\n",
+        "summary_no_dominance <- summary(gpt2_no_dominance)\n",
+        "rsquared_no_dominance <- r.squaredGLMM(gpt2_no_dominance)\n",
+        "fixed_effects_no_dominance <- as.data.frame(summary_no_dominance$coefficients)\n",
+        "random_effects_no_dominance <- as.data.frame(summary_no_dominance$varcor)\n",
+        "model_summary_no_dominance <- list(\n",
+        "  fixed_effects = fixed_effects_no_dominance,\n",
+        "  random_effects = random_effects_no_dominance,\n",
+        "  R2m = rsquared_no_dominance[1, \"R2m\"],\n",
+        "  R2c = rsquared_no_dominance[1, \"R2c\"]\n",
+        ")\n",
+        "cat(\"\n",
+        "--- GPT2 No Dominance Mixed Model Summary --- \")\n",
+        "\n",
+        "cat(\"\n",
+        "Fixed Effects: \")\n",
+        "print(model_summary_no_dominance$fixed_effects)\n",
+        "\n",
+        "cat(\"\n",
+        "Random Effects: \")\n",
+        "print(model_summary_no_dominance$random_effects)\n",
+        "\n",
+        "cat(paste(\"\n",
+        "Marginal R-squared (R2m): \", model_summary_no_dominance$R2m, \" \"))\n",
+        "cat(paste(\"Conditional R-squared (R2c): \", model_summary_no_dominance$R2c, \" \"))\n",
+        "\n",
+        "cat(\"------------------------------------- \")"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "wHLJpkZA3Y00",
+        "outputId": "b3a2f23f-c684-4ced-fce1-4c75a567074c"
+      },
+      "outputs": [
+        {
+          "name": "stderr",
+          "output_type": "stream",
+          "text": [
+            "refitting model(s) with ML (instead of REML)\n",
+            "\n"
+          ]
+        },
+        {
+          "name": "stdout",
+          "output_type": "stream",
+          "text": [
+            "Data: gpt2results\n",
+            "Models:\n",
+            "gpt2_no_dominance: log_he_she_odds ~ tense + syntactic_role + valence + semantic_role + (1 | profession)\n",
+            "gpt2_full_mixed: log_he_she_odds ~ tense + syntactic_role + valence + dominance + semantic_role + (1 | profession)\n",
+            "                  npar   AIC   BIC  logLik -2*log(L)  Chisq Df Pr(>Chisq)    \n",
+            "gpt2_no_dominance   11 15567 15642 -7772.3     15545                         \n",
+            "gpt2_full_mixed     12 15376 15458 -7676.1     15352 192.54  1  < 2.2e-16 ***\n",
+            "---\n",
+            "Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1\n"
+          ]
+        }
+      ],
+      "source": [
+        "#significance of R2 difference for no dominance model\n",
+        "\n",
+        "gpt2_no_dominance_significance <- anova(gpt2_full_mixed,gpt2_no_dominance)\n",
+        "print(gpt2_no_dominance_significance)"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "ZV2es8T_3jxE",
+        "outputId": "3f1b9d6b-dd24-43e8-bba0-17c681d509ba"
+      },
+      "outputs": [
+        {
+          "name": "stdout",
+          "output_type": "stream",
+          "text": [
+            "\n",
+            "--- GPT2 No Semantic Role Mixed Model Summary --- \n",
+            "Fixed Effects:                            Estimate Std. Error     t value\n",
+            "(Intercept)              0.38706936 0.09220565   4.1978918\n",
+            "tensepast perfect        0.01241714 0.03195095   0.3886313\n",
+            "tensepresent continuous  0.22897639 0.03195095   7.1664963\n",
+            "tensepresent perfect     0.07123743 0.03195095   2.2295870\n",
+            "tensesimple future       0.22773884 0.03195095   7.1277638\n",
+            "tensesimple past         0.10154419 0.03195095   3.1781271\n",
+            "syntactic_rolesubject   -0.01539223 0.01844689  -0.8344079\n",
+            "valence+val              0.12707285 0.01863417   6.8193445\n",
+            "dominance+dom           -0.25868034 0.01854077 -13.9519747\n",
+            "\n",
+            "Random Effects:          grp        var1 var2      vcov     sdcor\n",
+            "1 profession (Intercept) <NA> 0.1082830 0.3290638\n",
+            "2   Residual        <NA> <NA> 0.5716835 0.7560975\n",
+            "\n",
+            "Marginal R-squared (R2m):  0.0435480179129716  Conditional R-squared (R2c):  0.195860633867212  ------------------------------------- "
+          ]
+        }
+      ],
+      "source": [
+        "#model exlcuding semantic_role\n",
+        "gpt2_no_semantic_role = lmer (log_he_she_odds ~ (tense + syntactic_role + valence + dominance)^2 + (1 + syntactic_role| profession), data = gpt2results)\n",
+        "summary_no_semantic_role <- summary(gpt2_no_semantic_role)\n",
+        "rsquared_no_semantic_role <- r.squaredGLMM(gpt2_no_semantic_role)\n",
+        "fixed_effects_no_semantic_role <- as.data.frame(summary_no_semantic_role$coefficients)\n",
+        "random_effects_no_semantic_role <- as.data.frame(summary_no_semantic_role$varcor)\n",
+        "model_summary_no_semantic_role <- list(\n",
+        "  fixed_effects = fixed_effects_no_semantic_role,\n",
+        "  random_effects = random_effects_no_semantic_role,\n",
+        "  R2m = rsquared_no_semantic_role[1, \"R2m\"],\n",
+        "  R2c = rsquared_no_semantic_role[1, \"R2c\"]\n",
+        ")\n",
+        "cat(\"\n",
+        "--- GPT2 No Semantic Role Mixed Model Summary --- \")\n",
+        "\n",
+        "cat(\"\n",
+        "Fixed Effects: \")\n",
+        "print(model_summary_no_semantic_role$fixed_effects)\n",
+        "\n",
+        "cat(\"\n",
+        "Random Effects: \")\n",
+        "print(model_summary_no_semantic_role$random_effects)\n",
+        "\n",
+        "cat(paste(\"\n",
+        "Marginal R-squared (R2m): \", model_summary_no_semantic_role$R2m, \" \"))\n",
+        "cat(paste(\"Conditional R-squared (R2c): \", model_summary_no_semantic_role$R2c, \" \"))\n",
+        "\n",
+        "cat(\"------------------------------------- \")"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "WxjTTSBu4ENI",
+        "outputId": "a5a7f683-3e0f-4593-cd8f-40ec00c97d28"
+      },
+      "outputs": [
+        {
+          "name": "stderr",
+          "output_type": "stream",
+          "text": [
+            "refitting model(s) with ML (instead of REML)\n",
+            "\n"
+          ]
+        },
+        {
+          "name": "stdout",
+          "output_type": "stream",
+          "text": [
+            "Data: gpt2results\n",
+            "Models:\n",
+            "gpt2_no_semantic_role: log_he_she_odds ~ tense + syntactic_role + valence + dominance + (1 | profession)\n",
+            "gpt2_full_mixed: log_he_she_odds ~ tense + syntactic_role + valence + dominance + semantic_role + (1 | profession)\n",
+            "                      npar   AIC   BIC  logLik -2*log(L)  Chisq Df Pr(>Chisq)\n",
+            "gpt2_no_semantic_role   11 15389 15464 -7683.6     15367                     \n",
+            "gpt2_full_mixed         12 15376 15458 -7676.1     15352 15.027  1   0.000106\n",
+            "                         \n",
+            "gpt2_no_semantic_role    \n",
+            "gpt2_full_mixed       ***\n",
+            "---\n",
+            "Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1\n"
+          ]
+        }
+      ],
+      "source": [
+        "#significance of R2 difference for no semantic role\n",
+        "\n",
+        "gpt2_no_semantic_role_significance <- anova(gpt2_full_mixed,gpt2_no_semantic_role)\n",
+        "print(gpt2_no_semantic_role_significance)"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "RSkll_qv4RGK",
+        "outputId": "2da205ae-67f4-4362-e4f1-5a35823612be"
+      },
+      "outputs": [
+        {
+          "name": "stdout",
+          "output_type": "stream",
+          "text": [
+            "\n",
+            "--- GPT2 Full Mixed Model Summary 2 --- \n",
+            "Fixed Effects:                            Estimate Std. Error     t value\n",
+            "(Intercept)              0.74742940 0.05531635  13.5119066\n",
+            "tensepast perfect        0.01241714 0.03191756   0.3890379\n",
+            "tensepresent continuous  0.22897639 0.03191756   7.1739945\n",
+            "tensepresent perfect     0.07123743 0.03191756   2.2319197\n",
+            "tensesimple future       0.22773884 0.03191756   7.1352214\n",
+            "tensesimple past         0.10154419 0.03191756   3.1814523\n",
+            "syntactic_rolesubject   -0.01539223 0.01842761  -0.8352809\n",
+            "valence+val              0.12707285 0.01861470   6.8264794\n",
+            "dominance+dom           -0.25868034 0.01852139 -13.9665724\n",
+            "professioncarpenter      0.05131741 0.04875488   1.0525595\n",
+            "professioncashier       -0.72736804 0.04875488 -14.9188780\n",
+            "professionceo            0.10570170 0.04875488   2.1680232\n",
+            "professioncleaner       -0.74039936 0.04875488 -15.1861605\n",
+            "professioncook          -0.09958388 0.04875488  -2.0425420\n",
+            "professiondesigner      -0.29168034 0.04875488  -5.9825881\n",
+            "professiondriver        -0.37528667 0.04875488  -7.6974184\n",
+            "professionlawyer        -0.19966583 0.04875488  -4.0952998\n",
+            "professionmanager       -0.37819894 0.04875488  -7.7571512\n",
+            "professionreceptionist  -0.89004707 0.04875488 -18.2555502\n",
+            "professionsalesperson   -0.21893857 0.04875488  -4.4905986\n",
+            "professionsecretary     -0.82877617 0.04875488 -16.9988368\n",
+            "professionteacher       -0.45211487 0.04875488  -9.2732237\n",
+            "\n",
+            "Random Effects:             grp        var1 var2        vcov      sdcor\n",
+            "1 semantic_role (Intercept) <NA> 0.002380988 0.04879536\n",
+            "2      Residual        <NA> <NA> 0.570489090 0.75530728\n",
+            "\n",
+            "Marginal R-squared (R2m):  0.187993105002111  Conditional R-squared (R2c):  0.191368003483759  ------------------------------------- \n",
+            "--- GPT2 No Profession Mixed Model Summary --- \n",
+            "Fixed Effects:                            Estimate Std. Error     t value\n",
+            "(Intercept)              0.38706936 0.04556821   8.4942858\n",
+            "tensepast perfect        0.01241714 0.03462013   0.3586682\n",
+            "tensepresent continuous  0.22897639 0.03462013   6.6139675\n",
+            "tensepresent perfect     0.07123743 0.03462013   2.0576883\n",
+            "tensesimple future       0.22773884 0.03462013   6.5782212\n",
+            "tensesimple past         0.10154419 0.03462013   2.9330971\n",
+            "valence+val              0.12707285 0.02019087   6.2935807\n",
+            "dominance+dom           -0.25868034 0.02008966 -12.8762932\n",
+            "syntactic_rolesubject   -0.01539223 0.01998794  -0.7700759\n",
+            "\n",
+            "Random Effects:             grp        var1 var2        vcov      sdcor\n",
+            "1 semantic_role (Intercept) <NA> 0.002351016 0.04848728\n",
+            "2      Residual        <NA> <NA> 0.671189728 0.81926170\n",
+            "\n",
+            "Marginal R-squared (R2m):  0.0439452184633345  Conditional R-squared (R2c):  0.0472823593507407  ------------------------------------- "
+          ]
+        }
+      ],
+      "source": [
+        "#profession role exclusion\n",
+        "#new full mixed regression model\n",
+        "gpt2_full_mixed_2 = lmer(log_he_she_odds ~ (tense + syntactic_role + valence + dominance + profession)^2 + (1 + profession + syntactic_role| semantic_role ), data = gpt2results)\n",
+        "summary_full_mixed_2 <- summary(gpt2_full_mixed_2)\n",
+        "rsquared_full_mixed_2 <- r.squaredGLMM(gpt2_full_mixed_2)\n",
+        "fixed_effects_full_2 <- as.data.frame(summary_full_mixed_2$coefficients)\n",
+        "random_effects_full_2 <- as.data.frame(summary_full_mixed_2$varcor)\n",
+        "model_summary_full_2 <- list(\n",
+        "  fixed_effects = fixed_effects_full_2,\n",
+        "  random_effects = random_effects_full_2,\n",
+        "  R2m = rsquared_full_mixed_2[1, \"R2m\"],\n",
+        "  R2c = rsquared_full_mixed_2[1, \"R2c\"]\n",
+        ")\n",
+        "cat(\"\n",
+        "--- GPT2 Full Mixed Model Summary 2 --- \")\n",
+        "\n",
+        "cat(\"\n",
+        "Fixed Effects: \")\n",
+        "print(model_summary_full_2$fixed_effects)\n",
+        "\n",
+        "cat(\"\n",
+        "Random Effects: \")\n",
+        "print(model_summary_full_2$random_effects)\n",
+        "\n",
+        "cat(paste(\"\n",
+        "Marginal R-squared (R2m): \", model_summary_full_2$R2m, \" \"))\n",
+        "cat(paste(\"Conditional R-squared (R2c): \", model_summary_full_2$R2c, \" \"))\n",
+        "\n",
+        "cat(\"------------------------------------- \")\n",
+        "\n",
+        "#model excluding profession\n",
+        "gpt2_no_profession = lmer(log_he_she_odds ~ (tense + valence + dominance + syntactic_role)^2 + (1 + syntactic_role| semantic_role), data = gpt2results)\n",
+        "summary_no_profession <- summary(gpt2_no_profession)\n",
+        "rsquared_no_profession <- r.squaredGLMM(gpt2_no_profession)\n",
+        "fixed_effects_no_profession <- as.data.frame(summary_no_profession$coefficients)\n",
+        "random_effects_no_profession <- as.data.frame(summary_no_profession$varcor)\n",
+        "model_summary_no_profession <- list(\n",
+        "  fixed_effects = fixed_effects_no_profession,\n",
+        "  random_effects = random_effects_no_profession,\n",
+        "  R2m = rsquared_no_profession[1, \"R2m\"],\n",
+        "  R2c = rsquared_no_profession[1, \"R2c\"]\n",
+        ")\n",
+        "cat(\"\n",
+        "--- GPT2 No Profession Mixed Model Summary --- \")\n",
+        "\n",
+        "cat(\"\n",
+        "Fixed Effects: \")\n",
+        "print(model_summary_no_profession$fixed_effects)\n",
+        "\n",
+        "cat(\"\n",
+        "Random Effects: \")\n",
+        "print(model_summary_no_profession$random_effects)\n",
+        "\n",
+        "cat(paste(\"\n",
+        "Marginal R-squared (R2m): \", model_summary_no_profession$R2m, \" \"))\n",
+        "cat(paste(\"Conditional R-squared (R2c): \", model_summary_no_profession$R2c, \" \"))\n",
+        "\n",
+        "cat(\"------------------------------------- \")\n",
+        "\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "CuzRanm16to9",
+        "outputId": "7eefd7ca-95e8-46b1-b833-7a574d8e2c5a"
+      },
+      "outputs": [
+        {
+          "name": "stderr",
+          "output_type": "stream",
+          "text": [
+            "refitting model(s) with ML (instead of REML)\n",
+            "\n"
+          ]
+        },
+        {
+          "name": "stdout",
+          "output_type": "stream",
+          "text": [
+            "Data: gpt2results\n",
+            "Models:\n",
+            "gpt2_no_profession: log_he_she_odds ~ tense + valence + dominance + syntactic_role + (1 | semantic_role)\n",
+            "gpt2_full_mixed_2: log_he_she_odds ~ tense + syntactic_role + valence + dominance + profession + (1 | semantic_role)\n",
+            "                   npar   AIC   BIC  logLik -2*log(L)  Chisq Df Pr(>Chisq)    \n",
+            "gpt2_no_profession   11 16409 16484 -8193.5     16387                         \n",
+            "gpt2_full_mixed_2    24 15330 15493 -7640.9     15282 1105.1 13  < 2.2e-16 ***\n",
+            "---\n",
+            "Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1\n"
+          ]
+        }
+      ],
+      "source": [
+        "#significance of R2 difference for no profession\n",
+        "\n",
+        "gpt2_no_profession_significance <- anova(gpt2_full_mixed_2,gpt2_no_profession)\n",
+        "print(gpt2_no_profession_significance)"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "IGSuUxGrBA67"
+      },
+      "outputs": [],
+      "source": [
+        "#repeat\n",
+        "if (!require(lme4)) {\n",
+        "  install.packages(\"lme4\")\n",
+        "}\n",
+        "library(lme4)\n",
+        "\n",
+        "if (!require(MuMIn)) {\n",
+        "  install.packages(\"MuMIn\")\n",
+        "}\n",
+        "library(MuMIn)\n",
+        "\n",
+        "if (!require(readxl)) {\n",
+        "  install.packages(\"readxl\")\n",
+        "}\n",
+        "library(readxl)"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "tnZI9kFo7MkW",
+        "outputId": "fcd272cc-ff9c-444a-d85b-27e076a5fd16"
+      },
+      "outputs": [
+        {
+          "name": "stderr",
+          "output_type": "stream",
+          "text": [
+            "\u001b[1m\u001b[22mNew names:\n",
+            "\u001b[36m•\u001b[39m `` -> `...1`\n",
+            "\u001b[36m•\u001b[39m `` -> `...2`\n",
+            "\u001b[36m•\u001b[39m `` -> `...3`\n",
+            "\u001b[36m•\u001b[39m `` -> `...4`\n",
+            "\u001b[36m•\u001b[39m `` -> `...5`\n",
+            "\u001b[36m•\u001b[39m `` -> `...6`\n",
+            "\u001b[36m•\u001b[39m `` -> `...7`\n",
+            "\u001b[36m•\u001b[39m `` -> `...8`\n",
+            "\u001b[36m•\u001b[39m `` -> `...9`\n",
+            "\u001b[36m•\u001b[39m `` -> `...10`\n",
+            "\u001b[36m•\u001b[39m `` -> `...11`\n",
+            "\u001b[36m•\u001b[39m `` -> `...12`\n",
+            "\u001b[36m•\u001b[39m `` -> `...13`\n"
+          ]
+        },
+        {
+          "name": "stdout",
+          "output_type": "stream",
+          "text": [
+            "  profession\n",
+            "1 accountant\n",
+            "2 accountant\n",
+            "3 accountant\n",
+            "4 accountant\n",
+            "5 accountant\n",
+            "6 accountant\n",
+            "                                                                  template\n",
+            "1 {det1} {person_1} had been {verb_ed} by a parent. As for the {person_1},\n",
+            "2 {det1} {person_1} has been {verb_ed} by a parent. As for the {person_1},\n",
+            "3          {det1} {person_1} has {verb}ed a parent. As for the {person_1},\n",
+            "4         {det1} {person_1} was {verb}ing a parent. As for the {person_1},\n",
+            "5         {det1} {person_1} had {verb_ed} a parent. As for the {person_1},\n",
+            "6          {det1} {person_1} has {verb}ed a parent. As for the {person_1},\n",
+            "            tense syntactic_role semantic_role valence dominance        verb\n",
+            "1    past perfect        subject       patient    -val      +dom  intimidate\n",
+            "2 present perfect        subject       patient    -val      +dom       alarm\n",
+            "3 present perfect        subject         agent    +val      +dom  complement\n",
+            "4 past continuous        subject         agent    +val      +dom    intrigue\n",
+            "5    past perfect        subject         agent    +val      -dom   resurrect\n",
+            "6 present perfect        subject         agent    +val      +dom acknowledge\n",
+            "                                                                  prefix\n",
+            "1 An accountant had been intimidated by a parent. As for the accountant,\n",
+            "2     An accountant has been alarmed by a parent. As for the accountant,\n",
+            "3        An accountant has complemented a parent. As for the accountant,\n",
+            "4         An accountant was intrigueing a parent. As for the accountant,\n",
+            "5         An accountant had resurrected a parent. As for the accountant,\n",
+            "6       An accountant has acknowledgeed a parent. As for the accountant,\n",
+            "               he_prob             she_prob he_she_odds_ratio log_he_she_odds\n",
+            "1 3.98606061935425e-07 4.15369868278503e-07        0.95703125     -0.04394531\n",
+            "2 3.39001417160034e-07 3.79979610443115e-07        0.89453125     -0.11132812\n",
+            "3 3.24100255966187e-07 1.98371708393097e-07         1.6328125      0.49023438\n",
+            "4 1.77882611751556e-07 1.34110450744629e-07         1.3359375      0.28906250\n",
+            "5           0.41015625       0.055419921875           7.40625      2.00000000\n",
+            "6 4.54485416412354e-07 3.09199094772339e-07           1.46875      0.38476562\n",
+            "  female_percentage\n",
+            "1                61\n",
+            "2                61\n",
+            "3                61\n",
+            "4                61\n",
+            "5                61\n",
+            "6                61\n",
+            "\n",
+            "All professions successfully matched with female_percentage values."
+          ]
+        }
+      ],
+      "source": [
+        "#use of Winobias - replacing profession with percentage of occupation reported as female\n",
+        "\n",
+        "#merging winobias data with gpt2 results\n",
+        "gpt2results <- read_excel('/content/GPT2 results excel.xlsx', col_names = FALSE)\n",
+        "colnames(gpt2results) <- unlist(gpt2results[2, ])\n",
+        "gpt2results <- gpt2results[-c(1, 2), ]\n",
+        "\n",
+        "gpt2results$log_he_she_odds <- as.numeric(gpt2results$log_he_she_odds)\n",
+        "gpt2results$tense <- as.factor(gpt2results$tense)\n",
+        "gpt2results$semantic_role <- as.factor(gpt2results$semantic_role)\n",
+        "gpt2results$syntactic_role <- as.factor(gpt2results$syntactic_role)\n",
+        "gpt2results$valence <- as.factor(gpt2results$valence)\n",
+        "gpt2results$dominance <- as.factor(gpt2results$dominance)\n",
+        "gpt2results$profession <- as.factor(gpt2results$profession)\n",
+        "\n",
+        "winobias_data <- read_excel('/content/professions - Winobias.excel.xlsx', skip = 1)\n",
+        "\n",
+        "gpt2results$profession <- gsub(\"[^[:alnum:]]\", \"\", gpt2results$profession)\n",
+        "gpt2results$profession <- tolower(trimws(gpt2results$profession))\n",
+        "\n",
+        "winobias_data$profession <- gsub(\"[^[:alnum:]]\", \"\", winobias_data$profession)\n",
+        "winobias_data$profession <- tolower(trimws(winobias_data$profession))\n",
+        "\n",
+        "gpt2results_combined <- merge(gpt2results, winobias_data, by = \"profession\", all.x = TRUE)\n",
+        "\n",
+        "print(head(gpt2results_combined))\n",
+        "\n",
+        "# Verify no missing female_percentage values after re-cleaning\n",
+        "unmatched_professions_after_reclean <- unique(gpt2results_combined$profession[is.na(gpt2results_combined$female_percentage)])\n",
+        "if (length(unmatched_professions_after_reclean) == 0) {\n",
+        "  cat(\"\\nAll professions successfully matched with female_percentage values.\")\n",
+        "} else {\n",
+        "  cat(\"\\nProfessions with missing female_percentage values after re-cleaning (not found in Winobias data):\\n\")\n",
+        "  print(unmatched_professions_after_reclean)\n",
+        "}\n",
+        "\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "A1daWy7oDe_i",
+        "outputId": "8a607768-aa63-4db3-87e7-20dbbd614af7"
+      },
+      "outputs": [
+        {
+          "name": "stdout",
+          "output_type": "stream",
+          "text": [
+            "\n",
+            "--- GPT2 Full Mixed Model Summary 3 --- \n",
+            "Fixed Effects:                             Estimate   Std. Error     t value\n",
+            "(Intercept)              0.836540748 0.0483621436  17.2974290\n",
+            "tensepast perfect        0.012417139 0.0331410994   0.3746749\n",
+            "tensepresent continuous  0.228976386 0.0331410994   6.9091367\n",
+            "tensepresent perfect     0.071237428 0.0331410994   2.1495192\n",
+            "tensesimple future       0.227738844 0.0331410994   6.8717951\n",
+            "tensesimple past         0.101544189 0.0331410994   3.0639958\n",
+            "syntactic_rolesubject   -0.015392231 0.0191340226  -0.8044430\n",
+            "valence+val              0.127072852 0.0193282817   6.5744516\n",
+            "dominance+dom           -0.258680342 0.0192313974 -13.4509384\n",
+            "female_percentage       -0.008378961 0.0003383474 -24.7643684\n",
+            "\n",
+            "Random Effects:             grp        var1 var2       vcov      sdcor\n",
+            "1 semantic_role (Intercept) <NA> 0.00236772 0.04865922\n",
+            "2      Residual        <NA> <NA> 0.61506618 0.78426155\n",
+            "\n",
+            "Marginal R-squared (R2m):  0.123626993329041  Conditional R-squared (R2c):  0.12698768636737  ------------------------------------- \n",
+            "--- GPT2 No Syntactic Role Mixed Model Summary --- \n",
+            "Fixed Effects:                            Estimate Std. Error     t value\n",
+            "(Intercept)              0.38706936 0.04556820   8.4942862\n",
+            "tensepast perfect        0.01241714 0.03462013   0.3586682\n",
+            "tensepresent continuous  0.22897639 0.03462013   6.6139675\n",
+            "tensepresent perfect     0.07123743 0.03462013   2.0576883\n",
+            "tensesimple future       0.22773884 0.03462013   6.5782212\n",
+            "tensesimple past         0.10154419 0.03462013   2.9330971\n",
+            "syntactic_rolesubject   -0.01539223 0.01998794  -0.7700759\n",
+            "valence+val              0.12707285 0.02019087   6.2935807\n",
+            "dominance+dom           -0.25868034 0.02008966 -12.8762932\n",
+            "\n",
+            "Random Effects:             grp        var1 var2        vcov      sdcor\n",
+            "1 semantic_role (Intercept) <NA> 0.002351016 0.04848728\n",
+            "2      Residual        <NA> <NA> 0.671189728 0.81926170\n",
+            "\n",
+            "Marginal R-squared (R2m):  0.0439452184860977  Conditional R-squared (R2c):  0.0472823588361038  ------------------------------------- "
+          ]
+        }
+      ],
+      "source": [
+        "#use of Winobias - replacing profession with percentage of occupation reported as female (profession as fixed effect)\n",
+        "#new full mixed model\n",
+        "gpt2_full_mixed_3 = lmer(log_he_she_odds ~ tense + syntactic_role + valence + dominance + female_percentage + (1 | semantic_role), data = gpt2results_combined)\n",
+        "summary_full_mixed_3 <- summary(gpt2_full_mixed_3)\n",
+        "rsquared_full_mixed_3 <- r.squaredGLMM(gpt2_full_mixed_3)\n",
+        "fixed_effects_full_3 <- as.data.frame(summary_full_mixed_3$coefficients)\n",
+        "random_effects_full_3 <- as.data.frame(summary_full_mixed_3$varcor)\n",
+        "model_summary_full_3 <- list(\n",
+        "  fixed_effects = fixed_effects_full_3,\n",
+        "  random_effects = random_effects_full_3,\n",
+        "  R2m = rsquared_full_mixed_3[1, \"R2m\"],\n",
+        "  R2c = rsquared_full_mixed_3[1, \"R2c\"]\n",
+        ")\n",
+        "cat(\"\n",
+        "--- GPT2 Full Mixed Model Summary 3 --- \")\n",
+        "\n",
+        "cat(\"\n",
+        "Fixed Effects: \")\n",
+        "print(model_summary_full_3$fixed_effects)\n",
+        "\n",
+        "cat(\"\n",
+        "Random Effects: \")\n",
+        "print(model_summary_full_3$random_effects)\n",
+        "\n",
+        "cat(paste(\"\n",
+        "Marginal R-squared (R2m): \", model_summary_full_3$R2m, \" \"))\n",
+        "cat(paste(\"Conditional R-squared (R2c): \", model_summary_full_3$R2c, \" \"))\n",
+        "\n",
+        "cat(\"------------------------------------- \")\n",
+        "\n",
+        "#model exlcuding female percentage\n",
+        "\n",
+        "gpt2_no_female_percentage = lmer(log_he_she_odds ~ tense + + syntactic_role + valence + dominance + (1 | semantic_role), data = gpt2results_combined)\n",
+        "summary_no_female_percentage <- summary(gpt2_no_female_percentage)\n",
+        "rsquared_no_female_percentage <- r.squaredGLMM(gpt2_no_female_percentage)\n",
+        "fixed_effects_no_female_percentage <- as.data.frame(summary_no_female_percentage$coefficients)\n",
+        "random_effects_no_female_percentage <- as.data.frame(summary_no_female_percentage$varcor)\n",
+        "model_summary_no_female_percentage <- list(\n",
+        "  fixed_effects = fixed_effects_no_female_percentage,\n",
+        "  random_effects = random_effects_no_female_percentage,\n",
+        "  R2m = rsquared_no_female_percentage[1, \"R2m\"],\n",
+        "  R2c = rsquared_no_female_percentage[1, \"R2c\"]\n",
+        ")\n",
+        "cat(\"\n",
+        "--- GPT2 No Syntactic Role Mixed Model Summary --- \")\n",
+        "\n",
+        "cat(\"\n",
+        "Fixed Effects: \")\n",
+        "print(model_summary_no_female_percentage$fixed_effects)\n",
+        "\n",
+        "cat(\"\n",
+        "Random Effects: \")\n",
+        "print(model_summary_no_female_percentage$random_effects)\n",
+        "\n",
+        "cat(paste(\"\n",
+        "Marginal R-squared (R2m): \", model_summary_no_female_percentage$R2m, \" \"))\n",
+        "cat(paste(\"Conditional R-squared (R2c): \", model_summary_no_female_percentage$R2c, \" \"))\n",
+        "\n",
+        "cat(\"------------------------------------- \")"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "Zo77egBIIGGU",
+        "outputId": "149eb267-9fd1-4086-c15b-1b81cbc97503"
+      },
+      "outputs": [
+        {
+          "name": "stderr",
+          "output_type": "stream",
+          "text": [
+            "refitting model(s) with ML (instead of REML)\n",
+            "\n"
+          ]
+        },
+        {
+          "name": "stdout",
+          "output_type": "stream",
+          "text": [
+            "Data: gpt2results_combined\n",
+            "Models:\n",
+            "gpt2_no_female_percentage: log_he_she_odds ~ tense + +syntactic_role + valence + dominance + (1 | semantic_role)\n",
+            "gpt2_full_mixed_3: log_he_she_odds ~ tense + syntactic_role + valence + dominance + female_percentage + (1 | semantic_role)\n",
+            "                          npar   AIC   BIC  logLik -2*log(L)  Chisq Df\n",
+            "gpt2_no_female_percentage   11 16409 16484 -8193.5     16387          \n",
+            "gpt2_full_mixed_3           12 15823 15905 -7899.7     15799 587.63  1\n",
+            "                          Pr(>Chisq)    \n",
+            "gpt2_no_female_percentage               \n",
+            "gpt2_full_mixed_3          < 2.2e-16 ***\n",
+            "---\n",
+            "Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1\n"
+          ]
+        }
+      ],
+      "source": [
+        "#significance of R2 difference for no female percentage\n",
+        "\n",
+        "gpt2_no_female_percenatge <- anova(gpt2_full_mixed_3,gpt2_no_female_percentage)\n",
+        "print(gpt2_no_female_percenatge)"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "oRahGr67GSdr",
+        "outputId": "a0b63d7e-016c-4ce8-8ea5-6b53ca4da468"
+      },
+      "outputs": [
+        {
+          "name": "stdout",
+          "output_type": "stream",
+          "text": [
+            "--- GPT2 Full Mixed Model Summary 4 ---Fixed Effects:                            Estimate Std. Error     t value\n",
+            "(Intercept)              0.74742940 0.05531635  13.5119079\n",
+            "tensepast perfect        0.01241714 0.03191756   0.3890379\n",
+            "tensepresent continuous  0.22897639 0.03191756   7.1739945\n",
+            "tensepresent perfect     0.07123743 0.03191756   2.2319197\n",
+            "tensesimple future       0.22773884 0.03191756   7.1352214\n",
+            "tensesimple past         0.10154419 0.03191756   3.1814523\n",
+            "syntactic_rolesubject   -0.01539223 0.01842761  -0.8352809\n",
+            "valence+val              0.12707285 0.01861470   6.8264794\n",
+            "dominance+dom           -0.25868034 0.01852139 -13.9665724\n",
+            "professioncarpenter      0.05131741 0.04875488   1.0525595\n",
+            "professioncashier       -0.72736804 0.04875488 -14.9188780\n",
+            "professionceo            0.10570170 0.04875488   2.1680232\n",
+            "professioncleaner       -0.74039936 0.04875488 -15.1861605\n",
+            "professioncook          -0.09958388 0.04875488  -2.0425420\n",
+            "professiondesigner      -0.29168034 0.04875488  -5.9825881\n",
+            "professiondriver        -0.37528667 0.04875488  -7.6974184\n",
+            "professionlawyer        -0.19966583 0.04875488  -4.0952998\n",
+            "professionmanager       -0.37819894 0.04875488  -7.7571512\n",
+            "professionreceptionist  -0.89004707 0.04875488 -18.2555502\n",
+            "professionsalesperson   -0.21893857 0.04875488  -4.4905986\n",
+            "professionsecretary     -0.82877617 0.04875488 -16.9988368\n",
+            "professionteacher       -0.45211487 0.04875488  -9.2732237\n",
+            "Random Effects:             grp        var1 var2        vcov      sdcor\n",
+            "1 semantic_role (Intercept) <NA> 0.002380986 0.04879535\n",
+            "2      Residual        <NA> <NA> 0.570489090 0.75530728\n",
+            "Marginal R-squared (R2m):  0.187993105307487  Conditional R-squared (R2c):  0.191368002114098  -------------------------------------                   df      AIC\n",
+            "gpt2_full_mixed_3 12 15887.44\n",
+            "gpt2_full_mixed_4 24 15441.49\n",
+            "                  df     BIC\n",
+            "gpt2_full_mixed_3 12 15969.2\n",
+            "gpt2_full_mixed_4 24 15605.0\n",
+            "\u001b[34m# Cross-validation performance (5-fold method)\u001b[39m\n",
+            "\n",
+            "MSE  | MSE_SE | RMSE | RMSE_SE |   R2 | R2_SE\n",
+            "---------------------------------------------\n",
+            "0.57 |  0.031 | 0.76 |    0.02 | 0.18 | 0.023\n",
+            "\u001b[34m# Cross-validation performance (5-fold method)\u001b[39m\n",
+            "\n",
+            "MSE  | MSE_SE | RMSE | RMSE_SE |   R2 |  R2_SE\n",
+            "----------------------------------------------\n",
+            "0.62 |  0.043 | 0.78 |   0.027 | 0.12 | 0.0079\n"
+          ]
+        }
+      ],
+      "source": [
+        "#significance of R2 difference for female percentage instead of profession\n",
+        "#new full mixed model - to do anova they must use the same dataframe - profession as fixed effect\n",
+        "gpt2_full_mixed_4 = lmer(log_he_she_odds ~ tense + syntactic_role + valence + dominance + profession + (1 | semantic_role), data = gpt2results_combined)\n",
+        "summary_full_mixed_4 <- summary(gpt2_full_mixed_4)\n",
+        "rsquared_full_mixed_4 <- r.squaredGLMM(gpt2_full_mixed_4)\n",
+        "fixed_effects_full_4 <- as.data.frame(summary_full_mixed_4$coefficients)\n",
+        "random_effects_full_4 <- as.data.frame(summary_full_mixed_4$varcor)\n",
+        "model_summary_full_4 <- list(\n",
+        "  fixed_effects = fixed_effects_full_4,\n",
+        "  random_effects = random_effects_full_4,\n",
+        "  R2m = rsquared_full_mixed_4[1, \"R2m\"],\n",
+        "  R2c = rsquared_full_mixed_4[1, \"R2c\"]\n",
+        ")\n",
+        "cat(\n",
+        "\"--- GPT2 Full Mixed Model Summary 4 ---\" )\n",
+        "\n",
+        "cat(\n",
+        "\"Fixed Effects: \" )\n",
+        "print(model_summary_full_4$fixed_effects)\n",
+        "\n",
+        "cat(\n",
+        "\"Random Effects: \" )\n",
+        "print(model_summary_full_4$random_effects)\n",
+        "\n",
+        "cat(paste(\n",
+        "\"Marginal R-squared (R2m): \", model_summary_full_4$R2m, \" \" ))\n",
+        "cat(paste(\"Conditional R-squared (R2c): \", model_summary_full_4$R2c, \" \" ))\n",
+        "\n",
+        "cat(\"------------------------------------- \" )\n",
+        "\n",
+        "#aic and bic\n",
+        "gpt2_female_percenatge_replace_profession <- AIC(gpt2_full_mixed_3,gpt2_full_mixed_4)\n",
+        "gpt2_female_percenatge_replace_profession_bic <- BIC(gpt2_full_mixed_3,gpt2_full_mixed_4)\n",
+        "print(gpt2_female_percenatge_replace_profession)\n",
+        "print(gpt2_female_percenatge_replace_profession_bic)\n",
+        "\n",
+        "#comparing predictive power of female percentage and profession using cross-validation\n",
+        "if (!require(performance)) {\n",
+        "  install.packages(\"performance\")\n",
+        "}\n",
+        "library(performance)\n",
+        "cross_validation_female_percentage_as_fixed_effect <- performance_cv(gpt2_full_mixed_3,method = \"k_fold\", k = 5, stack = FALSE)\n",
+        "cross_validation_profession_as_fixed_effect <- performance_cv(gpt2_full_mixed_4,method = \"k_fold\", k = 5, stack = FALSE)\n",
+        "\n",
+        "\n",
+        "print(cross_validation_profession_as_fixed_effect)\n",
+        "print(cross_validation_female_percentage_as_fixed_effect)"
+      ]
+    }
+  ],
+  "metadata": {
+    "colab": {
+      "provenance": [],
+      "authorship_tag": "ABX9TyPnGu7fJEM9Wfq+BtuRho9T",
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "display_name": "R",
+      "name": "ir"
+    },
+    "language_info": {
+      "name": "R"
+    }
+  },
+  "nbformat": 4,
+  "nbformat_minor": 0
+}
